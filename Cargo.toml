@@ -1,0 +1,9 @@
+[package]
+name = "gb"
+version = "0.1.0"
+authors = ["Antinumeric <antinumeric@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+sdl2 = "0.30.0"
+
