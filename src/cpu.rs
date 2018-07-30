@@ -28,19 +28,19 @@ pub enum Register{
 #[allow(non_snake_case)]
 #[derive(Default)]
 pub struct Cpu {
-  pub A: u8,
-  pub F: u8,
-  pub B: u8,
-  pub C: u8,
-  pub D: u8,
-  pub E: u8,
-  pub H: u8,
-  pub L: u8,
-  pub SP: u16,
-  pub PC: u16,
-  pub interrupt_enabled: bool,
+  A: u8,
+  F: u8,
+  B: u8,
+  C: u8,
+  D: u8,
+  E: u8,
+  H: u8,
+  L: u8,
+  SP: u16,
+  PC: u16,
+  interrupt_enabled: bool,
 
-  pub mmu : Mmu,
+  mmu : Mmu,
 }
 
 macro_rules! apply8 {
