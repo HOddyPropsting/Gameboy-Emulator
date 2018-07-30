@@ -1,7 +1,7 @@
 [package]
 name = "gb"
 version = "0.1.0"
-authors = ["Antinumeric <antinumeric@gmail.com>"]
+authors = ["HOddyPropsting"]
 build = "build.rs"
 
 [dependencies]
