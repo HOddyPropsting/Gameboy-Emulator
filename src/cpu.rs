@@ -1,4 +1,5 @@
-use mmu::Mmu;
+use mmu::INTERRUPT_FLAGS;
+use mmu::{Mmu,Bit,INTERRUPT_ENABLED};
 
 const ZERO_FLAG:  u8 = 1 << 7;
 const NEG_FLAG:   u8 = 1 << 6;
@@ -23,7 +24,7 @@ pub enum Register{
   SP,
   PC,
   HL_address,
-} 
+}
 
 #[allow(non_snake_case)]
 #[derive(Default)]
@@ -1282,6 +1283,36 @@ impl Cpu {
       0o360...0o367 => self.set(reg_vec[(instruction % 8) as usize], 6),
       0o370...0o377 => self.set(reg_vec[(instruction % 8) as usize], 7),
       _ => panic!("invalid instruction given to prefix_cb"),
+    }
+  }
+
+  fn interrupt(&mut self, interrupt : Interrupt){
+    self.mmu.set_bit_usize(INTERRUPT_FLAGS, interrupt.get_bit());
+    if self.interrupt_enabled && self.mmu.get_bit_usize(INTERRUPT_ENABLED, interrupt.get_bit() ) {
+      self.interrupt_enabled = false;
+      push!(self,PC);
+      self.PC = interrupt as u16;
+    }
+  }
+}
+
+#[allow(non_camel_case_types)]
+ enum Interrupt{
+    V_BLANK = 0x0040,
+    LCDC = 0x0048,
+    TIMER_OVERFLOW = 0x0050,
+    SERIAL_TRANSFER = 0x0058,
+    INPUT = 0x0060,
+  }
+
+impl Interrupt{
+  fn get_bit(&self) -> Bit{
+    match self {
+      Interrupt::V_BLANK => Bit::One,
+      Interrupt::LCDC => Bit::Two,
+      Interrupt::TIMER_OVERFLOW => Bit::Three,
+      Interrupt::SERIAL_TRANSFER => Bit::Four,
+      Interrupt::INPUT => Bit::Five,
     }
   }
 }

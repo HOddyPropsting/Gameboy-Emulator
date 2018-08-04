@@ -3,7 +3,15 @@ pub struct Mmu{
   gb_internal_rom : [u8; 0x100],
 
   gb_cartridge : [u8; 65536],
+
+  boot_rom_locked : bool,
 }
+
+//important locations
+const REG_DIV : usize = 0xFF04;
+const BOOT_ROM_LOCKOUT: usize = 0xFF50;
+pub const INTERRUPT_ENABLED : usize = 0xFFFF;
+pub const INTERRUPT_FLAGS : usize = 0xFF0F;
 
 impl Default for Mmu {
   fn default() -> Mmu{
@@ -26,6 +34,7 @@ impl Default for Mmu {
         0x21, 0x04, 0x01, 0x11, 0xa8, 0x00, 0x1a, 0x13, 0xbe, 0x20, 0xfe, 0x23, 0x7d, 0xfe, 0x34, 0x20,
         0xf5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xfb, 0x86, 0x20, 0xfe, 0x3e, 0x01, 0xe0, 0x50,],
       gb_cartridge : [0; 0x10000],
+      boot_rom_locked : false,
     }
   }
 }
@@ -33,22 +42,29 @@ impl Default for Mmu {
 impl Mmu {
 
   pub fn fetch(&self, address : u16) -> u8{
-    let (mirror_address,_) = self.mirror_address(address);
-    if address < 0x100 && (self.gb_cartridge[0xFF50] & 1) == 0{
-      return self.gb_internal_rom[mirror_address as usize];
+    let (mirror_address,_) = self.mirror_address(address as usize);
+    if address < 0x100 && !self.boot_rom_locked{
+      return self.gb_internal_rom[mirror_address];
     } else {
-      return self.gb_cartridge[mirror_address as usize];  
+      return self.gb_cartridge[mirror_address];  
     }    
   }
 
   pub fn save(&mut self, address : u16, value:u8){
-    let (mirror_address,writable) = self.mirror_address(address);
+    let (mirror_address,writable) = self.mirror_address(address as usize);
     if writable {
-      self.gb_cartridge[mirror_address as usize] = value;
+      if mirror_address == REG_DIV { //writing to the divider register zeros it.
+        self.gb_cartridge[mirror_address] = 0x00;
+      } else if mirror_address == BOOT_ROM_LOCKOUT {
+        self.gb_cartridge[mirror_address] = value;
+        self.boot_rom_locked = true;
+      } else {
+        self.gb_cartridge[mirror_address] = value;   
+      }
     }
   }
 
-  pub fn mirror_address(&self, address : u16) -> (u16,bool){
+  pub fn mirror_address(&self, address : usize) -> (usize,bool){
     if address >= 0xE000 && address < 0xFE00 {
       (address - 0x2000,true)
     } else if address < 0xA000 || (address >= 0xFEA0 && address < 0xFF00){
@@ -58,8 +74,33 @@ impl Mmu {
     }
   }
 
-  pub fn get_bit(&self, loc : u16, bit : u8) -> bool{
-    return (self.fetch(loc) & bit) > 0;
+  pub fn set_bit(&self, loc : u16, bit : Bit) {
+    let temp = self.fetch(loc) & bit as u8;
+    self.save(loc, temp);
   }
 
+  pub fn set_bit_usize(&self, loc : usize, bit : Bit) {
+    let temp = self.fetch(loc as u16) & bit as u8;
+    self.save(loc as u16, temp);
+  }
+
+  pub fn get_bit(&self, loc : u16, bit : Bit) -> bool{
+    return (self.fetch(loc) & bit as u8) > 0;
+  }
+
+  pub fn get_bit_usize(&self, loc : usize, bit : Bit) -> bool{
+    return (self.fetch(loc as u16) & bit as u8) > 0;
+  }
+
+}
+
+pub enum Bit {
+  One = 0b00000001,
+  Two = 0b00000010,
+  Three = 0b00000100,
+  Four = 0b00001000,
+  Five = 0b00010000,
+  Six = 0b00100000,
+  Seven = 0b01000000,
+  Eight = 0b10000000,
 }

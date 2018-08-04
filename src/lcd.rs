@@ -1,11 +1,4 @@
-const BIT_0: u8 = 0b00000001;
-const BIT_1: u8 = 0b00000010;
-const BIT_2: u8 = 0b00000100;
-const BIT_3: u8 = 0b00001000;
-const BIT_4: u8 = 0b00010000;
-const BIT_5: u8 = 0b00100000;
-const BIT_6: u8 = 0b01000000;
-const BIT_7: u8 = 0b10000000;
+use mmu::{Mmu,Bit};
 
 const LCD_CONTROL_REGISTER: u16 = 0xFF40;
 const MIXED_OFFSET_1: u16 = 0x8800;
@@ -35,11 +28,11 @@ enum SpriteSize {
 impl lcd {
 
   fn get_lcd_enabled(mmu : &Mmu) -> bool{
-    return mmu.get_bit(LCD_CONTROL_REGISTER, BIT_7);
+    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Eight);
   }
 
   fn get_window_tile_bank(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, BIT_6){
+    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Seven){
       return BACKGROUND_OFFSET_2;
     } else {
       return BACKGROUND_OFFSET_1;
@@ -47,11 +40,11 @@ impl lcd {
   }
 
   fn get_window_enabled(mmu : &Mmu) -> bool {
-    return mmu.get_bit(LCD_CONTROL_REGISTER, BIT_5);
+    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Six);
   }
 
   fn get_mixed_tile_bank(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, BIT_4){
+    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Five){
       return MIXED_OFFSET_2;
     } else {
       return MIXED_OFFSET_1;
@@ -59,7 +52,7 @@ impl lcd {
   }
 
   fn get_bg_tile_bank(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, BIT_3){
+    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Four){
       return BACKGROUND_OFFSET_2;
     } else {
       return BACKGROUND_OFFSET_1;
@@ -67,7 +60,7 @@ impl lcd {
   }
 
   fn get_sprite_size(mmu : &Mmu) -> SpriteSize{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, BIT_2){
+    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Three){
       return SpriteSize::square;
     } else {
       return SpriteSize::rect;
@@ -75,11 +68,11 @@ impl lcd {
   }
 
   fn get_sprite_enabled(mmu : &Mmu) -> bool{
-    return mmu.get_bit(LCD_CONTROL_REGISTER, BIT_1);
+    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Two);
   }
 
   fn get_bg_enabled(mmu : &Mmu) -> bool {
-    return mmu.get_bit(LCD_CONTROL_REGISTER, BIT_0);  
+    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::One);  
   }
 
   fn get_scroll_y(mmu : &Mmu) -> u8{
