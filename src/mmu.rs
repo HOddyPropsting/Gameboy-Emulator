@@ -74,12 +74,12 @@ impl Mmu {
     }
   }
 
-  pub fn set_bit(&self, loc : u16, bit : Bit) {
+  pub fn set_bit(&mut self, loc : u16, bit : Bit) {
     let temp = self.fetch(loc) & bit as u8;
     self.save(loc, temp);
   }
 
-  pub fn set_bit_usize(&self, loc : usize, bit : Bit) {
+  pub fn set_bit_usize(&mut self, loc : usize, bit : Bit) {
     let temp = self.fetch(loc as u16) & bit as u8;
     self.save(loc as u16, temp);
   }
@@ -94,13 +94,14 @@ impl Mmu {
 
 }
 
+#[derive(Clone,Copy)]
 pub enum Bit {
-  One = 0b00000001,
-  Two = 0b00000010,
+  One   = 0b00000001,
+  Two   = 0b00000010,
   Three = 0b00000100,
-  Four = 0b00001000,
-  Five = 0b00010000,
-  Six = 0b00100000,
+  Four  = 0b00001000,
+  Five  = 0b00010000,
+  Six   = 0b00100000,
   Seven = 0b01000000,
   Eight = 0b10000000,
 }

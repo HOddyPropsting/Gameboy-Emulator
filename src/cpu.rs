@@ -311,26 +311,26 @@ impl Cpu {
     self.save_register8(a,shift_val);
   }
 
-  fn bit(&mut self, a : Register, bit: u8){
+  fn bit(&mut self, a : Register, bit: Bit){
     let val = self.load_register8(a);
-    let complement_bit = (val & (1 << bit)) == 0;
+    let complement_bit = (val & bit as u8) == 0;
     self.set_flag(ZERO_FLAG, complement_bit);
     self.set_flag(HALF_FLAG, true);
     self.set_flag(NEG_FLAG, false);
 
-    print!(" BIT {} VAL:{:>8b} CPL:{} ", bit,  val, complement_bit);
+    print!(" BIT {} VAL:{:>8b} CPL:{} ", bit as u8,  val, complement_bit);
 
   }
 
-  fn res(&mut self, a : Register, bit : u8){
+  fn res(&mut self, a : Register, bit : Bit){
     let val = self.load_register8(a);
-    let reset_val = val & !(1 << bit);
+    let reset_val = val & !(bit as u8);
     self.save_register8(a,reset_val);
   }
 
-  fn set(&mut self, a : Register, bit : u8){
+  fn set(&mut self, a : Register, bit : Bit){
     let val = self.load_register8(a);
-    let set_val = val | (1 << bit);
+    let set_val = val | (bit as u8);
     self.save_register8(a,set_val);
   }
 
@@ -1258,35 +1258,35 @@ impl Cpu {
       0o050...0o057 => self.sra(reg_vec[(instruction % 8) as usize]),
       0o060...0o067 => self.swap(reg_vec[(instruction % 8) as usize]),
       0o070...0o077 => self.srl(reg_vec[(instruction % 8) as usize]),
-      0o100...0o107 => self.bit(reg_vec[(instruction % 8) as usize], 0),
-      0o110...0o117 => self.bit(reg_vec[(instruction % 8) as usize], 1),
-      0o120...0o127 => self.bit(reg_vec[(instruction % 8) as usize], 2),
-      0o130...0o137 => self.bit(reg_vec[(instruction % 8) as usize], 3),
-      0o140...0o147 => self.bit(reg_vec[(instruction % 8) as usize], 4),
-      0o150...0o157 => self.bit(reg_vec[(instruction % 8) as usize], 5),
-      0o160...0o167 => self.bit(reg_vec[(instruction % 8) as usize], 6),
-      0o170...0o177 => self.bit(reg_vec[(instruction % 8) as usize], 7),
-      0o200...0o207 => self.res(reg_vec[(instruction % 8) as usize], 0),
-      0o210...0o217 => self.res(reg_vec[(instruction % 8) as usize], 1),
-      0o220...0o227 => self.res(reg_vec[(instruction % 8) as usize], 2),
-      0o230...0o237 => self.res(reg_vec[(instruction % 8) as usize], 3),
-      0o240...0o247 => self.res(reg_vec[(instruction % 8) as usize], 4),
-      0o250...0o257 => self.res(reg_vec[(instruction % 8) as usize], 5),
-      0o260...0o267 => self.res(reg_vec[(instruction % 8) as usize], 6),
-      0o270...0o277 => self.res(reg_vec[(instruction % 8) as usize], 7),
-      0o300...0o307 => self.set(reg_vec[(instruction % 8) as usize], 0),
-      0o310...0o317 => self.set(reg_vec[(instruction % 8) as usize], 1),
-      0o320...0o327 => self.set(reg_vec[(instruction % 8) as usize], 2),
-      0o330...0o337 => self.set(reg_vec[(instruction % 8) as usize], 3),
-      0o340...0o347 => self.set(reg_vec[(instruction % 8) as usize], 4),
-      0o350...0o357 => self.set(reg_vec[(instruction % 8) as usize], 5),
-      0o360...0o367 => self.set(reg_vec[(instruction % 8) as usize], 6),
-      0o370...0o377 => self.set(reg_vec[(instruction % 8) as usize], 7),
+      0o100...0o107 => self.bit(reg_vec[(instruction % 8) as usize], Bit::One),
+      0o110...0o117 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Two),
+      0o120...0o127 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Three),
+      0o130...0o137 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Four),
+      0o140...0o147 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Five),
+      0o150...0o157 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Six),
+      0o160...0o167 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Seven),
+      0o170...0o177 => self.bit(reg_vec[(instruction % 8) as usize], Bit::Eight),
+      0o200...0o207 => self.res(reg_vec[(instruction % 8) as usize], Bit::One),
+      0o210...0o217 => self.res(reg_vec[(instruction % 8) as usize], Bit::Two),
+      0o220...0o227 => self.res(reg_vec[(instruction % 8) as usize], Bit::Three),
+      0o230...0o237 => self.res(reg_vec[(instruction % 8) as usize], Bit::Four),
+      0o240...0o247 => self.res(reg_vec[(instruction % 8) as usize], Bit::Five),
+      0o250...0o257 => self.res(reg_vec[(instruction % 8) as usize], Bit::Six),
+      0o260...0o267 => self.res(reg_vec[(instruction % 8) as usize], Bit::Seven),
+      0o270...0o277 => self.res(reg_vec[(instruction % 8) as usize], Bit::Eight),
+      0o300...0o307 => self.set(reg_vec[(instruction % 8) as usize], Bit::One),
+      0o310...0o317 => self.set(reg_vec[(instruction % 8) as usize], Bit::Two),
+      0o320...0o327 => self.set(reg_vec[(instruction % 8) as usize], Bit::Three),
+      0o330...0o337 => self.set(reg_vec[(instruction % 8) as usize], Bit::Four),
+      0o340...0o347 => self.set(reg_vec[(instruction % 8) as usize], Bit::Five),
+      0o350...0o357 => self.set(reg_vec[(instruction % 8) as usize], Bit::Six),
+      0o360...0o367 => self.set(reg_vec[(instruction % 8) as usize], Bit::Seven),
+      0o370...0o377 => self.set(reg_vec[(instruction % 8) as usize], Bit::Eight),
       _ => panic!("invalid instruction given to prefix_cb"),
     }
   }
 
-  fn interrupt(&mut self, interrupt : Interrupt){
+  pub fn interrupt(&mut self, interrupt : Interrupt){
     self.mmu.set_bit_usize(INTERRUPT_FLAGS, interrupt.get_bit());
     if self.interrupt_enabled && self.mmu.get_bit_usize(INTERRUPT_ENABLED, interrupt.get_bit() ) {
       self.interrupt_enabled = false;
@@ -1297,7 +1297,7 @@ impl Cpu {
 }
 
 #[allow(non_camel_case_types)]
- enum Interrupt{
+pub enum Interrupt{
     V_BLANK = 0x0040,
     LCDC = 0x0048,
     TIMER_OVERFLOW = 0x0050,

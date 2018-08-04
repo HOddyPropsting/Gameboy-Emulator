@@ -3,7 +3,7 @@ extern crate sdl2;
 mod mmu;
 mod cpu;
 
-use cpu::Cpu;
+use cpu::{Cpu, Interrupt};
 use sdl2::rect::Point;
 use sdl2::pixels::Color;
 use std::time::*;
@@ -15,9 +15,9 @@ fn main() {
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
   let window = video_subsystem
-      .window("rust-sdl2 demo: Game of Life",
-              188,
-              188)
+      .window("RustyBoy",
+              160,
+              144)
       .position_centered()
       .build()
       .unwrap();
