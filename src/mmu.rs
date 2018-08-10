@@ -105,3 +105,50 @@ pub enum Bit {
   Seven = 0b01000000,
   Eight = 0b10000000,
 }
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  #[test]
+  fn fetch_returns_boot_rom_if_flag_set(){
+    let mut m : Mmu = Mmu::default();
+    assert_eq!(m.fetch(0x00),0x31,"Boot rom data fetched if BOOT_ROM_LOCKOUT is false");
+    m.boot_rom_locked = true;
+    assert_eq!(m.fetch(0x00),0x00,"ROM data fetched if BOOT_ROM_LOCKOUT is true");
+  }
+
+  #[test]
+  fn touching_boot_rom_lockout_locks_boot(){
+    let mut m : Mmu = Mmu::default();
+    assert_eq!(m.boot_rom_locked,false);
+    m.save(BOOT_ROM_LOCKOUT as u16,0x00);
+    assert_eq!(m.boot_rom_locked,true,"Writing to BOOT_ROM_LOCKOUT sets the boot rom locked flag");
+  }
+
+  #[test]
+  fn mirror_addresses() {
+    let mut m : Mmu = Mmu::default();
+    m.gb_cartridge[0xFD99] = 10;
+    m.gb_cartridge[0xDD99] = 99;
+    assert_eq!(m.fetch(0xFD99),99,"Fetching 0xFD99 returns 0xDD99");
+    m.gb_cartridge[0xE000] = 10;
+    m.gb_cartridge[0xC000] = 99;
+    assert_eq!(m.fetch(0xE000),99,"Fetching 0xE000 returns 0xC000");
+  }
+
+  #[test]
+  fn unwriteable_address_ranges_0x100() {    
+    let mut m : Mmu = Mmu::default();
+    m.gb_cartridge[0x0FFF] = 10;
+    m.save(0x0FFF,20);
+    assert_eq!(m.gb_cartridge[0x0FFF], 10,"0x0FFF is unwriteable");
+    m.gb_cartridge[0xFEA0] = 10;
+    m.save(0xFEA0,20);
+    assert_eq!(m.gb_cartridge[0xFEA0], 10,"0xFEA0 is unwriteable");
+    m.gb_cartridge[0xFEFF] = 10;
+    m.save(0xFEFF,20);
+    assert_eq!(m.gb_cartridge[0xFEFF], 10,"0xFEFF is unwriteable");
+  }
+}
