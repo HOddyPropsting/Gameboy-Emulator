@@ -1,12 +1,16 @@
 extern crate sdl2;
+extern crate rand;
 
 mod mmu;
 mod cpu;
+mod lcd;
 
-use cpu::{Cpu, Interrupt};
-use sdl2::rect::Point;
-use sdl2::pixels::Color;
+use rand::Rng;
+
+use cpu::Cpu;
+use mmu::Bit;
 use std::time::*;
+use lcd::Lcd;
 
 fn main() {
 
@@ -16,8 +20,8 @@ fn main() {
   let video_subsystem = sdl_context.video().unwrap();
   let window = video_subsystem
       .window("RustyBoy",
-              160,
-              144)
+              144,
+              160)
       .position_centered()
       .build()
       .unwrap();
@@ -27,26 +31,22 @@ fn main() {
         .present_vsync()
         .build().unwrap();
 
-  canvas.clear();
+  let mut lcd = Lcd{
+    canvas : canvas
+  };
 
-  canvas.set_draw_color(Color::RGB(255,0,0));
+  let mut rng = rand::thread_rng();
 
-  canvas.draw_point(Point::new(20,20)).unwrap();
-  canvas.draw_point(Point::new(20,21)).unwrap();
-  canvas.draw_point(Point::new(28,20)).unwrap();
-  canvas.draw_point(Point::new(21,21)).unwrap();
-    
-  canvas.present();
-
-  canvas.set_draw_color(Color::RGB(0,0,0));        
+  c.mmu.set_bit(0xFF40,Bit::One);
+  for i in 0..15 {
+    c.mmu.save(0x8000 + i,rng.gen::<u8>());
+  } 
 
   loop {
-    c.process_next_instruction();
+    //c.process_next_instruction();
+    lcd.render_screen(&c.mmu);
   }
 }
-
-
-
 
 struct Clock{
 

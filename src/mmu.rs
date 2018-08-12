@@ -59,7 +59,7 @@ impl Mmu {
         self.gb_cartridge[mirror_address] = value;
         self.boot_rom_locked = true;
       } else {
-        self.gb_cartridge[mirror_address] = value;   
+        self.gb_cartridge[mirror_address] = value;
       }
     }
   }
@@ -67,7 +67,7 @@ impl Mmu {
   pub fn mirror_address(&self, address : usize) -> (usize,bool){
     if address >= 0xE000 && address < 0xFE00 {
       (address - 0x2000,true)
-    } else if address < 0xA000 || (address >= 0xFEA0 && address < 0xFF00){
+    } else if address < 0x8000 || (address >= 0xFEA0 && address < 0xFF00){
       (address,false)
     } else {
       (address,true)
@@ -75,12 +75,12 @@ impl Mmu {
   }
 
   pub fn set_bit(&mut self, loc : u16, bit : Bit) {
-    let temp = self.fetch(loc) & bit as u8;
+    let temp = self.fetch(loc) | bit as u8;
     self.save(loc, temp);
   }
 
   pub fn set_bit_usize(&mut self, loc : usize, bit : Bit) {
-    let temp = self.fetch(loc as u16) & bit as u8;
+    let temp = self.fetch(loc as u16) | bit as u8;
     self.save(loc as u16, temp);
   }
 
@@ -105,6 +105,23 @@ pub enum Bit {
   Seven = 0b01000000,
   Eight = 0b10000000,
 }
+
+impl From<u8> for Bit {
+    fn from(b: u8) -> Self {
+      match b {
+        1 => Bit::One,
+        2 => Bit::Two,
+        3 => Bit::Three,
+        4 => Bit::Four,
+        5 => Bit::Five,
+        6 => Bit::Six,
+        7 => Bit::Seven,
+        8 => Bit::Eight,
+        _ => panic!("Tried to create an out of bounds Bit")
+      }       
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -150,5 +167,34 @@ mod tests {
     m.gb_cartridge[0xFEFF] = 10;
     m.save(0xFEFF,20);
     assert_eq!(m.gb_cartridge[0xFEFF], 10,"0xFEFF is unwriteable");
+  }
+
+  #[test]
+  fn set_bit() {
+    let mut m : Mmu = Mmu::default();
+    m.gb_cartridge[0x8000] = 0x00;
+    m.set_bit(0x8000,Bit::One);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00000001, "Bit 1 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Two);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00000011, "Bit 2 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Three);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00000111, "Bit 3 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Four);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00001111, "Bit 4 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Five);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00011111, "Bit 5 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Six);
+    assert_eq!(m.gb_cartridge[0x8000], 0b00111111, "Bit 6 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Seven);
+    assert_eq!(m.gb_cartridge[0x8000], 0b01111111, "Bit 7 set without changing lower bits" );
+
+    m.set_bit(0x8000,Bit::Eight);
+    assert_eq!(m.gb_cartridge[0x8000], 0b11111111, "Bit 8 set without changing lower bits" );
   }
 }

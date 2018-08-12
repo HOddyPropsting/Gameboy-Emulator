@@ -6,4 +6,4 @@ build = "build.rs"
 
 [dependencies]
 sdl2 = "0.30.0"
-
+rand = "0.5.5"

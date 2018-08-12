@@ -41,7 +41,7 @@ pub struct Cpu {
   PC: u16,
   interrupt_enabled: bool,
 
-  mmu : Mmu,
+  pub mmu : Mmu,
 }
 
 macro_rules! apply8 {
