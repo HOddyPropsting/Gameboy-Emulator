@@ -1,6 +1,9 @@
 use sdl2::pixels::Color;
 use sdl2::rect::Point;
 use sdl2::video::{Window, WindowContext};
+use sdl2::surface::Surface;
+use sdl2::video::WindowSurfaceRef;
+use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::Canvas;
 use mmu::{Mmu,Bit};
 
@@ -42,8 +45,9 @@ const COLOR_BLACK : Color = Color {
     a: 0,
 };
 
-pub struct Lcd {
-  pub canvas : Canvas<Window>,
+pub struct Lcd{
+pub canvas : Canvas<Window>,
+pub tex : [u8; 144*3*160],
 }
 
 impl Lcd {
@@ -177,15 +181,25 @@ impl Lcd {
   }
 
   pub fn render_screen(&mut self, mmu : &Mmu){
-    self.canvas.set_draw_color(COLOR_WHITE);
-    self.canvas.clear();
-    for y in 0..160 {
-      for x in 0..144{
-        self.canvas.set_draw_color(Lcd::get_screen_pixel(x,y,mmu));
-        self.canvas.draw_point(Point::new(x as i32,y as i32)).unwrap()
+    for y in 0u8..160u8 {
+      for x in 0u8..144u8{
+        let c = Lcd::get_screen_pixel(x as u8,y as u8,mmu);
+        let z : usize = ((x as u32 *3) + (y as u32 * 144 * 3)) as usize;
+        self.tex[z] = c.b;
+        self.tex[z+1] = c.g;
+        self.tex[z+2] = c.r;
       }
     }
+
+    let mut surface = Surface::new(144, 160, PixelFormatEnum::RGB24).expect("Failed to create surface");
+    surface.with_lock_mut(|data| {
+        data.copy_from_slice(&self.tex);
+    });
+
+    let ref texture_creator = self.canvas.texture_creator();
+    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+    self.canvas.copy(&texture, None, None).unwrap();
     self.canvas.present();
   }
 
-}
+} 
