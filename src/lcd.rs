@@ -134,7 +134,7 @@ impl Lcd {
 
   /// Returns the tile id for a given coördinate.
   /// This should be used once the scroll x / y have been added.
-  fn get_bg_tile_id(x : u8, y : u8, mmu : &Mmu) -> u8{
+  fn get_tile_id(x : u8, y : u8, mmu : &Mmu) -> u8{
     let mx = x/8;
     let my = y/8;
     let offset = Lcd::get_bg_tile_bank(mmu);
@@ -142,7 +142,7 @@ impl Lcd {
   }
 
   /// returns the address for the start of the tile data, for a given tile id
-  fn get_bg_tile_address(tile_id : u8, mmu : &Mmu) -> u16 {
+  fn get_tile_address(tile_id : u8, mmu : &Mmu) -> u16 {
     let offset = Lcd::get_tile_data_offset(mmu);
     if offset == TILE_DATA_OFFSET_1 {
       return (offset + (tile_id as u16 *0x000F)) as u16;
@@ -153,31 +153,47 @@ impl Lcd {
 
   /// Returns a 2 bit colour id.
   /// x and y are tile coördinates. i.e 0 < x <= 8, 0 < y <= 8
-  fn get_bg_tile_color_id(tile_address : u16, x : u8, y : u8, mmu : &Mmu) -> u8{
+  fn get_tile_color_id(tile_address : u16, x : u8, y : u8, mmu : &Mmu) -> u8{
     let a = mmu.fetch(tile_address + (y as u16*2));
     let b = mmu.fetch(tile_address + (y as u16*2) + 1);
     let bit = Bit::from(x+1);
-    let high = if a & bit as u8 > 0 {2} else {0};
-    let low = if b & bit as u8 > 0 {1} else {0};
+    let low = if a & bit as u8 > 0 {1} else {0};
+    let high = if b & bit as u8 > 0 {2} else {0};
     return low + high;
   }
 
   fn get_bg_pixel(x : u8, y : u8, mmu : &Mmu) -> Color{
     if !Lcd::get_bg_enabled(mmu) {
-      return COLOR_BLACK;
+      return COLOR_WHITE;
     }
     let vx = x.wrapping_add(Lcd::get_scroll_x(mmu)); //these wrap if it is over 256
     let vy = y.wrapping_add(Lcd::get_scroll_y(mmu));
     let tx = vx % 0x8;
     let ty = vy % 0x8;
-    let address = Lcd::get_bg_tile_address(Lcd::get_bg_tile_id(vx, vy, mmu), mmu);
-    let color_id = Lcd::get_bg_tile_color_id(address, tx, ty, mmu);
-    let color = Lcd::get_bg_shade(color_id, mmu);
-    return color;
+    let address = Lcd::get_tile_address(Lcd::get_tile_id(vx, vy, mmu), mmu);
+    let color_id = Lcd::get_tile_color_id(address, tx, ty, mmu);
+    Lcd::get_bg_shade(color_id, mmu)
+  }
+
+  fn get_window_pixel(x : u8, y : u8, mmu : &Mmu) -> Option<Color>{
+    let wx = Lcd::get_window_x(mmu).saturating_sub(7);
+    let wy = Lcd::get_window_y(mmu);
+    if Lcd::get_window_enabled(mmu) && x >= wx && y >= wy {
+      let tx = x % 0x8;
+      let ty = y % 0x8;
+      let address = Lcd::get_tile_address(Lcd::get_tile_id(x, y, mmu), mmu);
+      let color_id = Lcd::get_tile_color_id(address, tx, ty, mmu);
+      Some(Lcd::get_bg_shade(color_id,mmu))
+    } else {
+      None
+    }
   }
 
   fn get_screen_pixel(x : u8, y : u8, mmu : &Mmu) -> Color{
-    Lcd::get_bg_pixel(x,y, mmu)
+    match Lcd::get_window_pixel(x, y,mmu){
+      Some(c) => c,
+      None => Lcd::get_bg_pixel(x,y, mmu),
+    }
   }
 
   pub fn render_screen(&mut self, mmu : &Mmu){
@@ -193,7 +209,7 @@ impl Lcd {
 
     let mut surface = Surface::new(144, 160, PixelFormatEnum::RGB24).expect("Failed to create surface");
     surface.with_lock_mut(|data| {
-        data.copy_from_slice(&self.tex);
+      data.copy_from_slice(&self.tex);
     });
 
     let ref texture_creator = self.canvas.texture_creator();
