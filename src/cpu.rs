@@ -67,7 +67,7 @@ macro_rules! pop {
     let sp = $cpu.load_register16(Register::SP);
     let l = $cpu.load_address(sp);
     let h = $cpu.load_address(sp.wrapping_add(1));
-    print!(" POP! {:>04x}, {:>02x}, {:>02x},", ((h as u16) << 8) + (l as u16), h as u8, l as u8);
+    //print!(" POP! {:>04x}, {:>02x}, {:>02x},", ((h as u16) << 8) + (l as u16), h as u8, l as u8);
     let hl = ((h as u16) << 8) + (l as u16);
     $cpu.save_register16(Register::$r, hl);
     $cpu.save_register16(Register::SP, sp.wrapping_add(2));
@@ -79,7 +79,7 @@ macro_rules! push {
   ($cpu:ident,$r:ident) => {{
       let sp = $cpu.load_register16(Register::SP);
       let pc = $cpu.load_register16(Register::$r);
-      print!(" PUSH! {:>04x}, {:>02x}, {:>02x},", pc, pc as u8, (pc>>8) as u8,);
+      //print!(" PUSH! {:>04x}, {:>02x}, {:>02x},", pc, pc as u8, (pc>>8) as u8,);
 
       $cpu.save_address(sp.wrapping_sub(2), pc as u8);
       $cpu.save_address(sp.wrapping_sub(1), (pc >> 8) as u8);
@@ -90,6 +90,12 @@ macro_rules! push {
 
 
 impl Cpu {
+
+  pub fn process(&mut self, count : u16){
+    for _ in 0..count { 
+      self.process_next_instruction();
+    }
+  }
 
   fn fetch_u8(&mut self) -> u8{
     let x = self.mmu.fetch(self.PC);
@@ -318,7 +324,7 @@ impl Cpu {
     self.set_flag(HALF_FLAG, true);
     self.set_flag(NEG_FLAG, false);
 
-    print!(" BIT {} VAL:{:>8b} CPL:{} ", bit as u8,  val, complement_bit);
+    //print!(" BIT {} VAL:{:>8b} CPL:{} ", bit as u8,  val, complement_bit);
 
   }
 
@@ -364,884 +370,915 @@ impl Cpu {
   }
 
   pub fn process_next_instruction(&mut self) {
+    //print!("{:4x} ", self.load_register16(Register::PC));
     match self.fetch_u8() {
-      0x00 => print!("NOP"), 
+      0x00 => {} //print!("NOP")
+      , 
       0x01 => { let x = self.fetch_u16();
                 self.save_register16(Register::BC, x);
-                print!("LD BC {:4x}",x)
+                //print!("LD BC {:4x}",x)
               },
       0x02 => {  let y = self.load_register8(Register::A);
                 self.save_register_address(Register::BC,y);
-                print!("LD (BC) A")
+                //print!("LD (BC) A")
               },
       0x03 => {  let tmp = self.load_register16(Register::BC).wrapping_add(1);
                 self.save_register16(Register::BC, tmp);
-                print!("INC BC")
+                //print!("INC BC")
               },
       0x04 => { apply8!(self ,B , add8 , 1);
-                print!("INC B")
+                //print!("INC B")
               },
       0x05 => { apply8!(self ,B , sub8 , 1);
-                print!("DEC B")
+                //print!("DEC B")
               },
       0x06 => { let x = self.fetch_u8();
                 self.save_register8(Register::B, x);
-                 print!("LD B {:2x}", x)
+                 //print!("LD B {:2x}", x)
               },
       0x07 => { let x = self.A & 0b10000000;
                 self.A = self.A.rotate_left(1); 
                 self.zero_flags();
                 self.set_flag(CARRY_FLAG, x > 0); 
-                print!("RLCA")
+                //print!("RLCA")
               },
       0x08 => {  let x = self.load_register16(Register::SP);
                 let y = self.fetch_u16();
                 self.save_address(y, x as u8);
                 self.save_address(y+1, (x >> 8) as u8);
-                print!("LD ({:4x}) SP", y)
+                //print!("LD ({:4x}) SP", y)
               },
       0x09 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register16(Register::BC);
                 let z = self.add16(x,y);
                 self.save_register16(Register::HL,z);
-                print!("ADD HL BC")
+                //print!("ADD HL BC")
               },
       0x0A => { let y = self.load_register_address(Register::BC);
                 self.save_register8(Register::A, y);
-                print!("LD A (BC)") 
+                //print!("LD A (BC)") 
               },
       0x0B => { let tmp = self.load_register16(Register::BC).wrapping_sub(1);
                 self.save_register16(Register::BC, tmp);
-                print!("DEC BC")
+                //print!("DEC BC")
               },
       0x0C => { apply8!(self ,C , add8 , 1);
-                print!("INC C")
+                //print!("INC C")
               },
       0x0D => { apply8!(self,C , sub8 , 1);
-                print!("DEC C")
+                //print!("DEC C")
               }, 
       0x0E => { let x = self.fetch_u8();
                 self.save_register8(Register::C, x);
-                print!("LD C {:2x}", x)
+                //print!("LD C {:2x}", x)
                },
       0x0F => { let x = self.A & 0b1; 
                 self.A = self.A.rotate_right(1);  
                 self.zero_flags(); 
                 self.set_flag(CARRY_FLAG, x > 0); 
-                print!("RRCA")
+                //print!("RRCA")
               },
-      0x10 => print!("unimplemented STOP"),
+      0x10 => {}, //print!("unimplemented STOP"),
       0x11 => { let x = self.fetch_u16();
                 self.save_register16(Register::DE, x);
-                print!("LD DE {:4x}", x)
+                //print!("LD DE {:4x}", x)
               },
       0x12 => {  let y = self.load_register8(Register::A);
                 self.save_register_address(Register::DE,y);
-                print!("LD (DE) A")
+                //print!("LD (DE) A")
               },
       0x13 => { let tmp = self.load_register16(Register::DE).wrapping_add(1);
                 self.save_register16(Register::DE, tmp);
-                print!("INC DE")
+                //print!("INC DE")
               },
       0x14 => { apply8!(self,D , add8 , 1);
-                print!("INC D")
+                //print!("INC D")
               },
       0x15 => { apply8!(self,D , sub8 , 1);
-                print!("DEC D") 
+                //print!("DEC D") 
               },
       0x16 => { let x = self.fetch_u8(); 
                 self.save_register8(Register::D, x);
-                print!("LD D {:2x}",x)
+                //print!("LD D {:2x}",x)
               },
       0x17 => { let x = self.A & 0b10000000; 
                 self.A = self.A.rotate_left(1); 
                 self.A = (self.A & 0b11111110) | (self.get_flag(CARRY_FLAG) as u8); 
                 self.zero_flags(); 
                 self.set_flag(CARRY_FLAG, x > 0); 
-                print!("RLA")
+                //print!("RLA")
               },
       0x18 => { let x = self.fetch_i8(); 
                 self.PC = ((self.PC as i16).wrapping_add(x as i16)) as u16;
-                 print!("JR {:4x}", x)
+                 //print!("JR {:4x}", x)
               },
       0x19 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register16(Register::DE);
                 let z = self.add16(x,y);
                 self.save_register16(Register::HL,z);
-                print!("ADD HL DE")
+                //print!("ADD HL DE")
               },
       0x1A => { let y = self.load_register_address(Register::BC);
                 self.save_register8(Register::A,y);
-                print!("LD A (DE)")
+                //print!("LD A (DE)")
               },
       0x1B => { let tmp = self.load_register16(Register::DE).wrapping_sub(1);
                 self.save_register16(Register::DE, tmp);
-                print!("DEC DE")
+                //print!("DEC DE")
               },
       0x1C => { apply8!(self,E , add8 , 1);
-                print!("INC E")
+                //print!("INC E")
               },
       0x1D => { apply8!(self,E , sub8 , 1);
-                print!("DEC E")
+                //print!("DEC E")
               },
       0x1E => { let x = self.fetch_u8(); 
                 self.save_register8(Register::E, x);
-                print!("LD E {:4x}", x)
+                //print!("LD E {:4x}", x)
               },
        0x1F => { let x = self.A & 0b1; 
                 self.A = self.A.rotate_right(1); 
                 self.A = (self.A & 0b01111111) | ((self.get_flag(CARRY_FLAG) as u8) << 7); 
                 self.zero_flags(); 
                 self.set_flag(CARRY_FLAG, x > 0); 
-                print!("RRA")
+                //print!("RRA")
               },
       0x20 => { let x = self.fetch_i8(); 
                 if !(self.get_flag(ZERO_FLAG)) { 
                   self.PC = ((self.PC as i16).wrapping_add(x as i16)) as u16;
                 };
-                print!("JR NZ {:4x}", x)
+                //print!("JR NZ {:4x}", x)
               },
       0x21 => { let x = self.fetch_u16();
                 self.save_register16(Register::HL, x);
-                print!("LD HL {:4x}", x) 
+                //print!("LD HL {:4x}", x) 
               },
       0x22 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register8(Register::A);
                 self.save_address(x,y);
                 self.save_register16(Register::HL, x.wrapping_add(1));
-                print!("LD (HL+) A, {:4x}", y)
+                //print!("LD (HL+) A, {:4x}", y)
               },
       0x23 => { let tmp = self.load_register16(Register::HL).wrapping_add(1);
                 self.save_register16(Register::HL, tmp);
-                print!("INC HL")
+                //print!("INC HL")
               },
       0x24 => { apply8!(self,H , add8 , 1);
-                print!("INC H")
+                //print!("INC H")
               },
       0x25 => { apply8!(self,H , sub8 , 1);
-                print!("DEC H")
+                //print!("DEC H")
               },
       0x26 => { let x = self.fetch_u8();
                 self.save_register8(Register::H, x);
-                print!("LD H,{:4x}", x)
+                //print!("LD H,{:4x}", x)
               },
-      0x27 => { print!("unimplemented DAA") },
+      0x27 => { //print!("unimplemented DAA") 
+              },
       0x28 => { let x = self.fetch_i8(); 
                 if self.get_flag(ZERO_FLAG) { 
                   self.PC = ((self.PC as i16).wrapping_add(x as i16)) as u16;
                 };
-                print!("JR Z {:4x}", x)
+                //print!("JR Z {:4x}", x)
               },
       0x29 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register16(Register::HL);
                 let z = self.add16(x,y);
                 self.save_register16(Register::HL,z);
-                print!("ADD HL,HL")
+                //print!("ADD HL,HL")
               },
       0x2A => { let x = self.load_register16(Register::HL);
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
                 self.save_register16(Register::HL, x.wrapping_add(1));
-                print!("LD A (HL+), {:4x}", y)
+                //print!("LD A (HL+), {:4x}", y)
               }, 
       0x2B => { let tmp = self.load_register16(Register::HL).wrapping_sub(1);
                 self.save_register16(Register::BC, tmp);
-                print!("DEC HL")
+                //print!("DEC HL")
               },
       0x2C => { apply8!(self,L , add8 , 1);
-                print!("INC L")
+                //print!("INC L")
               },
       0x2D => { apply8!(self,L , sub8 , 1);
-                print!("DEC L")
+                //print!("DEC L")
               },
       0x2E => { let x = self.fetch_u8(); 
                 self.save_register8(Register::L, x);
-                print!("LD L {:4x}", x)
+                //print!("LD L {:4x}", x)
               },
       0x2F => { self.A = !self.A;
-                print!("CPL")
+                //print!("CPL")
               },
       0x30 => { let x = self.fetch_i8();
                 if !self.get_flag(CARRY_FLAG) {
                   self.PC = ((self.PC as i16).wrapping_add(x as i16)) as u16;
                 };
-                print!("JR NC {:4x}", x) },
+                //print!("JR NC {:4x}", x) 
+              },
       0x31 => { let x = self.fetch_u16();
                 self.save_register16(Register::SP, x);
-                print!("LD SP {:4x}", x) },
+                //print!("LD SP {:4x}", x) 
+              },
       0x32 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register8(Register::A);
                 self.save_address(x,y);
                 self.save_register16(Register::HL, x.wrapping_sub(1));
-                print!("LD (HL-) A, {:4x}", x) },
+                //print!("LD (HL-) A, {:4x}", x) 
+              },
       0x33 => { let x = self.load_register16(Register::SP).wrapping_add(1);
                 self.save_register16(Register::SP, x);
-                print!("INC SP") },
+                //print!("INC SP") 
+              },
       0x34 => { let x = self.load_register_address(Register::HL);
                 let y = self.add8(x,1);
                 self.save_register_address(Register::HL,y);
-                print!("INC (HL)") },
+                //print!("INC (HL)") 
+              },
       0x35 => { let x = self.load_register_address(Register::HL);
                 let y = self.sub8(x,1);
                 self.save_register_address(Register::HL,y);
-                print!("DEC (HL)") },
+                //print!("DEC (HL)") 
+              },
       0x36 => { let x = self.fetch_u8();
                 self.save_register_address(Register::HL, x);
-                print!("LD (HL) d8") },
+                //print!("LD (HL) d8") 
+              },
       0x37 => { self.set_flag(CARRY_FLAG, true);
                 self.set_flag(NEG_FLAG, false);
                 self.set_flag(HALF_FLAG, false);
-                print!("SCF") 
+                //print!("SCF") 
               },
       0x38 => { let x = self.fetch_i8(); 
                 if self.get_flag(CARRY_FLAG) { 
                   self.PC = ((self.PC as i16).wrapping_add(x as i16)) as u16;
                 };
-                print!("JR C {:4x}", x) 
+                //print!("JR C {:4x}", x) 
               },
       0x39 => { let x = self.load_register16(Register::HL);
                 let y = self.load_register16(Register::SP);
                 let z = self.add16(x,y);
                 self.save_register16(Register::HL,z);
-                print!("ADD HL SP") 
+                //print!("ADD HL SP") 
               },
       0x3A => { let x = self.load_register16(Register::HL);
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
                 self.save_register16(Register::HL, x.wrapping_sub(1));
-                print!("LD A (HL-), {:4x}", y) 
+                //print!("LD A (HL-), {:4x}", y) 
               },
       0x3B => { let tmp = self.load_register16(Register::SP).wrapping_sub(1);
                 self.save_register16(Register::BC, tmp);
-                print!("DEC SP") 
+                //print!("DEC SP") 
               },
       0x3C => { apply8!(self,A, add8, 1);
-                print!("INC A") 
+                //print!("INC A") 
               },
       0x3D => { apply8!(self,A, sub8, 1);
-                print!("DEC A") },
+                //print!("DEC A") 
+              },
       0x3E => { let x = self.fetch_u8();
                 self.save_register8(Register::A,x);
-                print!("LD A d8") 
+                //print!("LD A d8") 
               },
       0x3F => { let x = !self.get_flag(CARRY_FLAG);
                 self.set_flag(CARRY_FLAG, x);
                 self.set_flag(NEG_FLAG, false);
                 self.set_flag(HALF_FLAG, false);
-                print!("CCF") 
+                //print!("CCF") 
               },
       0x40 => { ld_8!(self,B,B);
-                print!("LD B B") 
+                //print!("LD B B") 
               },
       0x41 => { ld_8!(self,B,C);
-                print!("LD B C") 
+                //print!("LD B C") 
               },
       0x42 => { ld_8!(self,B,D);
-                print!("LD B D") 
+                //print!("LD B D") 
               },
       0x43 => { ld_8!(self,B,E);
-                print!("LD B E") 
+                //print!("LD B E") 
               },
       0x44 => { ld_8!(self,B,H);
-                print!("LD B H") 
+                //print!("LD B H") 
               },
       0x45 => { ld_8!(self,B,L);
-                print!("LD B L") 
+                //print!("LD B L") 
               },
       0x46 => { ld_8!(self,B,HL_address);
-                print!("LD B (HL)") 
+                //print!("LD B (HL)") 
               },
       0x47 => { ld_8!(self,B,A);
-                print!("LD B A") 
+                //print!("LD B A") 
               },
       0x48 => { ld_8!(self,C,B);
-                print!("LD C B") 
+                //print!("LD C B") 
               },
       0x49 => { ld_8!(self,C,C);
-                print!("LD C C") 
+                //print!("LD C C") 
               },
       0x4A => { ld_8!(self,C,D);
-                print!("LD C D") 
+                //print!("LD C D") 
               },
       0x4B => { ld_8!(self,C,E);
-                print!("LD C E") 
+                //print!("LD C E") 
               },
       0x4C => { ld_8!(self,C,H);
-                print!("LD C H") 
+                //print!("LD C H") 
               },
       0x4D => { ld_8!(self,C,L);
-                print!("LD C L") 
+                //print!("LD C L") 
               },
       0x4E => { ld_8!(self,C,HL_address);
-                print!("LD C (HL)") 
+                //print!("LD C (HL)") 
               },
       0x4F => { ld_8!(self,C,A);
-                print!("LD C A") 
+                //print!("LD C A") 
               },
       0x50 => { ld_8!(self,D,C);
-                print!("LD D B") 
+                //print!("LD D B") 
               },
       0x51 => { ld_8!(self,D,C);
-                print!("LD D C") 
+                //print!("LD D C") 
               },
       0x52 => { ld_8!(self,D,D);
-                print!("LD D D") 
+                //print!("LD D D") 
               },
       0x53 => { ld_8!(self,D,E);
-                print!("LD D E") 
+                //print!("LD D E") 
               },
       0x54 => { ld_8!(self,D,H);
-                print!("LD D H") 
+                //print!("LD D H") 
               },
       0x55 => { ld_8!(self,D,L);
-                print!("LD D L") 
+                //print!("LD D L") 
               },
       0x56 => { ld_8!(self,D,HL_address);;
-                print!("LD D (HL)") 
+                //print!("LD D (HL)") 
               },
       0x57 => { ld_8!(self,D,A);
-                print!("LD D A") 
+                //print!("LD D A") 
               },
       0x58 => { ld_8!(self,E,B);
-                print!("LD E B") 
+                //print!("LD E B") 
               },
       0x59 => { ld_8!(self,E,C);
-                print!("LD E C") 
+                //print!("LD E C") 
               },
       0x5A => { ld_8!(self,E,D);
-                print!("LD E D") 
+                //print!("LD E D") 
               },
       0x5B => { ld_8!(self,E,E);
-                print!("LD E E") 
+                //print!("LD E E") 
               },
       0x5C => { ld_8!(self,E,H);
-                print!("LD E H") 
+                //print!("LD E H") 
               },
       0x5D => { ld_8!(self,E,L);
-                print!("LD E L") 
+                //print!("LD E L") 
               },
       0x5E => { ld_8!(self,E,HL_address);
-                print!("LD E (HL)") 
+                //print!("LD E (HL)") 
               },
       0x5F => { ld_8!(self,E,A);
-                print!("LD E A") 
+                //print!("LD E A") 
               },
       0x60 => { ld_8!(self,H,C);
-                print!("LD H B") 
+                //print!("LD H B") 
               },
       0x61 => { ld_8!(self,H,C);
-                print!("LD H C") 
+                //print!("LD H C") 
               },
       0x62 => { ld_8!(self,H,D);
-                print!("LD H D") 
+                //print!("LD H D") 
               },
       0x63 => { ld_8!(self,H,E);
-                print!("LD H E") 
+                //print!("LD H E") 
               },
       0x64 => { ld_8!(self,H,H);
-                print!("LD H H") 
+                //print!("LD H H") 
               },
       0x65 => { ld_8!(self,H,L);
-                print!("LD H L") 
+                //print!("LD H L") 
               },
       0x66 => { ld_8!(self,H,HL_address);
-                print!("LD H (HL)") 
+                //print!("LD H (HL)") 
               },
       0x67 => { ld_8!(self,H,A);
-                print!("LD H A") 
+                //print!("LD H A") 
               },
       0x68 => { ld_8!(self,L,B);
-                print!("LD L B") 
+                //print!("LD L B") 
               },
       0x69 => { ld_8!(self,L,C);
-                print!("LD L C") 
+                //print!("LD L C") 
               },
       0x6A => { ld_8!(self,L,D);
-                print!("LD L D") 
+                //print!("LD L D") 
               },
       0x6B => { ld_8!(self,L,E);
-                print!("LD L E") 
+                //print!("LD L E") 
               },
       0x6C => { ld_8!(self,L,H);
-                print!("LD L H") 
+                //print!("LD L H") 
               },
       0x6D => { ld_8!(self,L,L);
-                print!("LD L L") 
+                //print!("LD L L") 
               },
       0x6E => { ld_8!(self,L,HL_address);
-                print!("LD L (HL)") 
+                //print!("LD L (HL)") 
               },
       0x6F => { ld_8!(self,L,A); 
-                print!("LD L A") 
+                //print!("LD L A") 
               },
       0x70 => { ld_8!(self,HL_address,B);
-                print!("LD (HL) B") 
+                //print!("LD (HL) B") 
               },
       0x71 => { ld_8!(self,HL_address,C);
-                print!("LD (HL) C") 
+                //print!("LD (HL) C") 
               },
       0x72 => { ld_8!(self,HL_address,D);
-                print!("LD (HL) D") 
+                //print!("LD (HL) D") 
               },
       0x73 => { ld_8!(self,HL_address,E);
-                print!("LD (HL) E") 
+                //print!("LD (HL) E") 
               },
       0x74 => { ld_8!(self,HL_address,H);
-                print!("LD (HL) H") 
+                //print!("LD (HL) H") 
               },
       0x75 => { ld_8!(self,HL_address,L);
-                print!("LD (HL) L") 
+                //print!("LD (HL) L") 
               },
-      0x76 => { print!("unimplemented HALT") },
+      0x76 => { //print!("unimplemented HALT")
+       },
       0x77 => { ld_8!(self,HL_address,A);
-                print!("LD (HL) A")
+                //print!("LD (HL) A")
               },
       0x78 => { ld_8!(self,A,B);
-                print!("LD A B") 
+                //print!("LD A B") 
               },
       0x79 => { ld_8!(self,A,C);
-                print!("LD A C") 
+                //print!("LD A C") 
               },
       0x7A => { ld_8!(self,A,D);
-                print!("LD A D") 
+                //print!("LD A D") 
               },
       0x7B => { ld_8!(self,A,E);
-                print!("LD A E") 
+                //print!("LD A E") 
               },
       0x7C => { ld_8!(self,A,H);
-                print!("LD A H") 
+                //print!("LD A H") 
               },
       0x7D => { ld_8!(self,A,L);
-                print!("LD A L") 
+                //print!("LD A L") 
               },
       0x7E => { let x = self.load_register_address(Register::HL);
                 self.save_register8(Register::A,x);
-                print!("LD A (HL)") 
+                //print!("LD A (HL)") 
               },
       0x7F => { ld_8!(self,A,A);
-                print!("LD A A") },
+                //print!("LD A A") 
+              },
       0x80 => { apply8!(self,A,add8,self.load_register8(Register::B));
-                print!("ADD A B") 
+                //print!("ADD A B") 
               },
       0x81 => { apply8!(self,A,add8,self.load_register8(Register::C));
-                print!("ADD A C") 
+                //print!("ADD A C") 
               },
       0x82 => { apply8!(self,A,add8,self.load_register8(Register::D));
-                print!("ADD A D") 
+                //print!("ADD A D") 
               },
       0x83 => { apply8!(self,A,add8,self.load_register8(Register::E));
-                print!("ADD A E") 
+                //print!("ADD A E") 
               },
       0x84 => { apply8!(self,A,add8,self.load_register8(Register::H));
-                print!("ADD A H") 
+                //print!("ADD A H") 
               },
       0x85 => { apply8!(self,A,add8,self.load_register8(Register::L));
-                print!("ADD A L") 
+                //print!("ADD A L") 
               },
       0x86 => { apply8!(self,A,add8,self.load_register_address(Register::HL));
-                print!("ADD A (HL)") 
+                //print!("ADD A (HL)") 
               },
       0x87 => { apply8!(self,A,add8,self.load_register8(Register::A));
-                print!("ADD A A") 
+                //print!("ADD A A") 
               },
       0x88 => { apply8!(self,A,add8,self.load_register8(Register::B).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A B") 
+                //print!("ADC A B") 
               },
       0x89 => { apply8!(self,A,add8,self.load_register8(Register::C).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A C") 
+                //print!("ADC A C") 
               },
       0x8A => { apply8!(self,A,add8,self.load_register8(Register::D).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A D") 
+                //print!("ADC A D") 
               },
       0x8B => { apply8!(self,A,add8,self.load_register8(Register::E).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A E") 
+                //print!("ADC A E") 
               },
       0x8C => { apply8!(self,A,add8,self.load_register8(Register::H).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A H") 
+                //print!("ADC A H") 
               },
       0x8D => { apply8!(self,A,add8,self.load_register8(Register::L).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A L") 
+                //print!("ADC A L") 
               },
       0x8E => { apply8!(self,A,add8,self.load_register_address(Register::HL).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A (HL)") 
+                //print!("ADC A (HL)") 
               },
       0x8F => { apply8!(self,A,add8,self.load_register8(Register::A).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A A") 
+                //print!("ADC A A") 
               },
       0x90 => { apply8!(self,A,sub8,self.load_register8(Register::B));
-                print!("ADD A B") 
+                //print!("ADD A B") 
               },
       0x91 => { apply8!(self,A,sub8,self.load_register8(Register::C));
-                print!("ADD A C") 
+                //print!("ADD A C") 
               },
       0x92 => { apply8!(self,A,sub8,self.load_register8(Register::D));
-                print!("ADD A D") 
+                //print!("ADD A D") 
               },
       0x93 => { apply8!(self,A,sub8,self.load_register8(Register::E));
-                print!("ADD A E") 
+                //print!("ADD A E") 
               },
       0x94 => { apply8!(self,A,sub8,self.load_register8(Register::H));
-                print!("ADD A H") 
+                //print!("ADD A H") 
               },
       0x95 => { apply8!(self,A,sub8,self.load_register8(Register::L));
-                print!("ADD A L") 
+                //print!("ADD A L") 
               },
       0x96 => { apply8!(self,A,sub8,self.load_register_address(Register::HL));
-                print!("ADD A (HL)") 
+                //print!("ADD A (HL)") 
               },
       0x97 => { apply8!(self,A,sub8,self.load_register8(Register::A));
-                print!("ADD A A") 
+                //print!("ADD A A") 
               },
       0x98 => { apply8!(self,A,sub8,self.load_register8(Register::B).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A B") 
+                //print!("ADC A B") 
               },
       0x99 => { apply8!(self,A,sub8,self.load_register8(Register::C).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A C") 
+                //print!("ADC A C") 
               },
       0x9A => { apply8!(self,A,sub8,self.load_register8(Register::D).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A D") 
+                //print!("ADC A D") 
               },
       0x9B => { apply8!(self,A,sub8,self.load_register8(Register::E).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A E") 
+                //print!("ADC A E") 
               },
       0x9C => { apply8!(self,A,sub8,self.load_register8(Register::H).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A H") 
+                //print!("ADC A H") 
               },
       0x9D => { apply8!(self,A,sub8,self.load_register8(Register::L).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A L") 
+                //print!("ADC A L") 
               },
       0x9E => { apply8!(self,A,sub8,self.load_register_address(Register::HL).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A (HL)") 
+                //print!("ADC A (HL)") 
               },
       0x9F => { apply8!(self,A,sub8,self.load_register8(Register::A).wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC A A") 
+                //print!("ADC A A") 
               },
       0xA0 => { apply8!(self,A,and8,self.load_register8(Register::B));
-                print!("AND B") 
+                //print!("AND B") 
               },
       0xA1 => { apply8!(self,A,and8,self.load_register8(Register::C));
-                print!("AND C") 
+                //print!("AND C") 
               },
       0xA2 => { apply8!(self,A,and8,self.load_register8(Register::D));
-                print!("AND D") 
+                //print!("AND D") 
               },
       0xA3 => { apply8!(self,A,and8,self.load_register8(Register::E));
-                print!("AND E") 
+                //print!("AND E") 
               },
       0xA4 => { apply8!(self,A,and8,self.load_register8(Register::H));
-                print!("AND H") 
+                //print!("AND H") 
               },
       0xA5 => { apply8!(self,A,and8,self.load_register8(Register::L));
-                print!("AND L") 
+                //print!("AND L") 
               },
       0xA6 => { apply8!(self,A,and8,self.load_register_address(Register::HL));
-                print!("AND (HL)") 
+                //print!("AND (HL)") 
               },
       0xA7 => { apply8!(self,A,and8,self.load_register8(Register::A));
-                print!("AND A") 
+                //print!("AND A") 
               },
       0xA8 => { apply8!(self,A,xor8,self.load_register8(Register::B));
-                print!("XOR B") 
+                //print!("XOR B") 
               },
       0xA9 => { apply8!(self,A,xor8,self.load_register8(Register::C));
-                print!("XOR C") 
+                //print!("XOR C") 
               },
       0xAA => { apply8!(self,A,xor8,self.load_register8(Register::D));
-                print!("XOR D") 
+                //print!("XOR D") 
               },
       0xAB => { apply8!(self,A,xor8,self.load_register8(Register::E));
-                print!("XOR E") 
+                //print!("XOR E") 
               },
       0xAC => { apply8!(self,A,xor8,self.load_register8(Register::H));
-                print!("XOR H") 
+                //print!("XOR H") 
               },
       0xAD => { apply8!(self,A,xor8,self.load_register8(Register::L));
-                print!("XOR L") 
+                //print!("XOR L") 
               },
       0xAE => { apply8!(self,A,xor8,self.load_register_address(Register::HL));
-                print!("XOR (HL)") 
+                //print!("XOR (HL)") 
               },
       0xAF => { apply8!(self,A,xor8,self.load_register8(Register::A));
-                print!("XOR A") 
+                //print!("XOR A") 
               },
       0xB0 => { apply8!(self,A,or8,self.load_register8(Register::B));
-                print!("OR B") 
+                //print!("OR B") 
               },
       0xB1 => { apply8!(self,A,or8,self.load_register8(Register::C));
-                print!("OR C") 
+                //print!("OR C") 
               },
       0xB2 => { apply8!(self,A,or8,self.load_register8(Register::D));
-                print!("OR D") 
+                //print!("OR D") 
               },
       0xB3 => { apply8!(self,A,or8,self.load_register8(Register::E));
-                print!("OR E") 
+                //print!("OR E") 
               },
       0xB4 => { apply8!(self,A,or8,self.load_register8(Register::H));
-                print!("OR H") 
+                //print!("OR H") 
               },
       0xB5 => { apply8!(self,A,or8,self.load_register8(Register::L));
-                print!("OR L") 
+                //print!("OR L") 
               },
       0xB6 => { apply8!(self,A,or8,self.load_register_address(Register::HL));
-                print!("OR (HL)") 
+                //print!("OR (HL)") 
               },
       0xB7 => { apply8!(self,A,or8,self.load_register8(Register::A));
-                print!("OR A") 
+                //print!("OR A") 
               },
       0xB8 => { apply8!(self,A,cp8,self.load_register8(Register::B));
-                print!("CP B") 
+                //print!("CP B") 
               },
       0xB9 => { apply8!(self,A,cp8,self.load_register8(Register::C));
-                print!("CP C") 
+                //print!("CP C") 
               },
       0xBA => { apply8!(self,A,cp8,self.load_register8(Register::D));
-                print!("CP D") 
+                //print!("CP D") 
               },
       0xBB => { apply8!(self,A,cp8,self.load_register8(Register::E));
-                print!("CP E") 
+                //print!("CP E") 
               },
       0xBC => { apply8!(self,A,cp8,self.load_register8(Register::H));
-                print!("CP H") 
+                //print!("CP H") 
               },
       0xBD => { apply8!(self,A,cp8,self.load_register8(Register::L));
-                print!("CP L") 
+                //print!("CP L") 
               },
       0xBE => { apply8!(self,A,cp8,self.load_register_address(Register::HL));
-                print!("CP (HL)") 
+                //print!("CP (HL)") 
               },
       0xBF => { apply8!(self,A,cp8,self.load_register8(Register::A));
-                print!("CP A") 
+                //print!("CP A") 
               },
       0xC0 => { if !self.get_flag(ZERO_FLAG) {
                 pop!(self,PC)
                 };
-                print!("RET NZ") 
+                //print!("RET NZ") 
               },
       0xC1 => { pop!(self,BC);
-                print!("POP BC")
+                //print!("POP BC")
               },
       0xC2 => { let x = self.fetch_u16();
                 if !self.get_flag(ZERO_FLAG) {
                   self.save_register16(Register::PC, x);
                 };
-                print!("JP NZ {:4x}", x) 
+                //print!("JP NZ {:4x}", x) 
               },
       0xC3 => { let x = self.fetch_u16();
                 self.save_register16(Register::PC, x);
-                print!("JP {:4x}", x) 
+                //print!("JP {:4x}", x) 
               }, 
       0xC4 => { let a16 = self.fetch_u16();
                 if !self.get_flag(ZERO_FLAG) {
                   push!(self,PC);
                   self.save_register16(Register::PC, a16);
                 };
-                print!("CALL NZ {:4x}", a16) 
+                //print!("CALL NZ {:4x}", a16) 
               },
       0xC5 => { push!(self,BC);
-                print!("PUSH BC") 
+                //print!("PUSH BC") 
               },
       0xC6 => { apply8!(self,A,add8,self.fetch_u8());
-                print!("ADD A d8") 
+                //print!("ADD A d8") 
               },
       0xC7 => { push!(self,PC);
                 self.save_register16(Register::PC, 0x00);
-                print!("RST 0x00") 
+                //print!("RST 0x00") 
               },
       0xC8 => { if self.get_flag(ZERO_FLAG) {
                   pop!(self,PC);
                 };
-                print!("RET Z") 
+                //print!("RET Z") 
               },
-      0xC9 => { print!("{:>02x}{:>02x} ",self.mmu.fetch(self.SP), self.mmu.fetch(self.SP+1));
+      0xC9 => { //print!("{:>02x}{:>02x} ",self.mmu.fetch(self.SP), self.mmu.fetch(self.SP+1));
                 pop!(self,PC);
-                print!("RET") 
+                //print!("RET") 
               },
       0xCA => { let x = self.fetch_u16();
                 if self.get_flag(ZERO_FLAG) {
                   self.save_register16(Register::PC, x);
                 };
-                print!("JP Z {:4x}", x) 
+                //print!("JP Z {:4x}", x) 
               },
       0xCB => { self.prefix_cb();
-                print!("PREFIX CB") },
+                //print!("PREFIX CB") 
+              },
       0xCC => { let a16 = self.fetch_u16();
                 if self.get_flag(ZERO_FLAG) {
                   push!(self,PC);
                   self.save_register16(Register::PC, a16);
                 };
-                print!("CALL Z {:4x}", a16) 
+                //print!("CALL Z {:4x}", a16) 
               },
       0xCD => { push!(self,PC);
                 let a16 = self.fetch_u16();
                 self.save_register16(Register::PC, a16);
-                print!("CALL PC:{:>04x} {:4x}",self.PC, a16) 
+                //print!("CALL PC:{:>04x} {:4x}",self.PC, a16) 
               },
       0xCE => { apply8!(self,A,add8,self.fetch_u8().wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("ADC d8") 
+                //print!("ADC d8") 
               },
       0xCF => { push!(self,PC);
                 self.save_register16(Register::PC, 0x08);
-                print!("RST 0x08") 
+                //print!("RST 0x08") 
               },
       0xD0 => { if !self.get_flag(CARRY_FLAG) {
                   pop!(self,PC)
                 };
-                print!("RET NC") 
+                //print!("RET NC") 
               },
       0xD1 => { pop!(self,DE);
-                print!("POP DE")
+                //print!("POP DE")
               },
       0xD2 => { let x = self.fetch_u16();
                 if !self.get_flag(CARRY_FLAG) {
                   self.save_register16(Register::PC, x);
                 };
-                print!("JP NC {:4x}", x)
+                //print!("JP NC {:4x}", x)
               },
-      0xD3 => { print!("0xD3 N/A") },
+      0xD3 => { //print!("0xD3 N/A") 
+    },
       0xD4 => { let a16 = self.fetch_u16();
                 if !self.get_flag(CARRY_FLAG) {
                   push!(self,PC);
                   self.save_register16(Register::PC, a16);
                 };
-                print!("CALL NC {:4x}", a16) 
+                //print!("CALL NC {:4x}", a16) 
               },
       0xD5 => { push!(self,DE);
-                print!("PUSH DE") 
+                //print!("PUSH DE") 
               },
       0xD6 => { apply8!(self,A,sub8,self.fetch_u8());
-                print!("SUB d8") 
+                //print!("SUB d8") 
               },
       0xD7 => { push!(self,PC);
                 self.save_register16(Register::PC, 0x10);
-                print!("RST 0x10") 
+                //print!("RST 0x10") 
               },
       0xD8 => { if self.get_flag(CARRY_FLAG) {
                   pop!(self,PC);
                 }
-                print!("RET C") 
+                //print!("RET C") 
               },
       0xD9 => { pop!(self,PC);
                 self.interrupt_enabled = true;
-                print!("RETI") 
+                //print!("RETI") 
               },
       0xDA => { let x = self.fetch_u16();
                 if self.get_flag(CARRY_FLAG) {
                   self.save_register16(Register::PC, x);
                 };
-                print!("JP C {:4x}", x) 
+                //print!("JP C {:4x}", x) 
               },
-      0xDB => { print!("0xDB N/A") },
+      0xDB => { //print!("0xDB N/A") 
+    },
       0xDC => { let a16 = self.fetch_u16();
                 if self.get_flag(CARRY_FLAG) {
                   push!(self,PC);              
                   self.save_register16(Register::PC, a16);
                 };
-                print!("CALL C {:4x}", a16) 
+                //print!("CALL C {:4x}", a16) 
               },
-      0xDD => { print!("0xDD N/A") },
+      0xDD => { //print!("0xDD N/A") 
+    },
       0xDE => { apply8!(self,A,sub8,self.fetch_u8().wrapping_add(self.get_flag(CARRY_FLAG) as u8));
-                print!("SBC A d8") 
+                //print!("SBC A d8") 
               },
       0xDF => { push!(self,PC);
                 self.save_register16(Register::PC, 0x18);
-                print!("RST 0x18") 
+                //print!("RST 0x18") 
               },
       0xE0 => { let x = self.fetch_u8() as u16 + 0xFF00;
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
-                print!("LD (0xFF00 + {:4x}) A", x) 
+                //print!("LD (0xFF00 + {:4x}) A", x) 
               },
       0xE1 => { pop!(self,HL);
-                print!("POP HL") 
+                //print!("POP HL") 
               },
       0xE2 => { let x = self.load_register8(Register::C) as u16 + 0xFF00;
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
-                print!("LD (0xFF00 + C) A") 
+                //print!("LD (0xFF00 + C) A") 
               },
-      0xE3 => { print!("0xE3 N/A") },
-      0xE4 => { print!("0xE4 N/A") },
+      0xE3 => { //print!("0xE3 N/A") 
+              },
+      0xE4 => { //print!("0xE4 N/A") 
+              },
       0xE5 => { push!(self,HL);
-                print!("PUSH HL") 
+                //print!("PUSH HL") 
               },
       0xE6 => { apply8!(self,A,and8,self.fetch_u8());
-                print!("AND d8") 
+                //print!("AND d8") 
               },
       0xE7 => { push!(self,PC);
                 self.save_register16(Register::PC, 0x20);
-                print!("RST 0x20") 
+                //print!("RST 0x20") 
               },
       0xE8 => { let x = self.fetch_i8(); 
                 self.SP = ((self.SP as i16).wrapping_add(x as i16)) as u16;
-                print!("ADD SP {:4x}", x) 
+                //print!("ADD SP {:4x}", x) 
               },
       0xE9 => { let x = self.load_register16(Register::HL);
                 self.save_register16(Register::PC, x);
-                print!("JP (HL)") 
+                //print!("JP (HL)") 
               },
       0xEA => { let x = self.fetch_u16();
                 let y = self.load_address(x);
                 self.save_register8(Register::A, y);
-                print!("LD ({:4x}) A", x) },
-      0xEB => { print!("0xEB N/A") },
-      0xEC => { print!("0xEC N/A") },
-      0xED => { print!("0xED N/A") },
+                //print!("LD ({:4x}) A", x) 
+              },
+      0xEB => { //print!("0xEB N/A") 
+              },
+      0xEC => { //print!("0xEC N/A") 
+              },
+      0xED => { //print!("0xED N/A") 
+              },
       0xEE => { apply8!(self,A,xor8,self.fetch_u8());
-                print!("XOR d8")
+                //print!("XOR d8")
               },
       0xEF => { push!(self,PC);
                 self.save_register16(Register::PC, 0x28);
-                print!("RST 0x28") 
+                //print!("RST 0x28") 
               },
       0xF0 => { let x = self.fetch_u8() as u16 + 0xFF00;
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
-                print!("LD A, (0xFF00 + {:4x})", x) 
+                //print!("LD A, (0xFF00 + {:4x})", x) 
               },
       0xF1 => { pop!(self,AF);
-                print!("POP AF") },
+                //print!("POP AF") 
+              },
       0xF2 => { let x = self.load_register8(Register::C) as u16 + 0xFF00;
                 let y = self.load_address(x);
                 self.save_register8(Register::A,y);
-                print!("LD A (0xFF00 + C") 
+                //print!("LD A (0xFF00 + C") 
               },
       0xF3 => { self.interrupt_enabled = false;
-                print!("DI") 
+                //print!("DI") 
               },
-      0xF4 => { print!("0xF4 N/A") },
+      0xF4 => { //print!("0xF4 N/A") 
+    },
       0xF5 => { push!(self,AF);
-                print!("PUSH AF") },
+                //print!("PUSH AF") 
+              },
       0xF6 => { apply8!(self,A,or8,self.fetch_u8());
-                print!("OR d8") },
+                //print!("OR d8") 
+              },
       0xF7 => { push!(self,PC);
                 self.save_register16(Register::PC, 0x30);
-                print!("RST 0x30") 
+                //print!("RST 0x30") 
               },
       0xF8 => { let x = self.load_register16(Register::SP) + self.fetch_u8() as u16;
                 self.save_register16(Register::HL,x);
-                print!("LD HL SP + {:4x}", x) 
+                //print!("LD HL SP + {:4x}", x) 
               },
       0xF9 => { let x = self.load_register16(Register::HL);
                 self.save_register16(Register::SP, x);
-                print!("LD SP HL") },
+                //print!("LD SP HL") 
+              },
       0xFA => { let x = self.fetch_u16();
                 let y = self.load_address(x);
-                print!("LD A ({:4x})", x)
+                //print!("LD A ({:4x})", x)
               },
       0xFB => { self.interrupt_enabled = true;
-                print!("EI") 
+                //print!("EI") 
               },
-      0xFC => { print!("0xFC N/A") },
-      0xFD => { print!("0xFD N/A") },
+      0xFC => { //print!("0xFC N/A") 
+              },
+      0xFD => { //print!("0xFD N/A") 
+              },
       0xFE => { apply8!(self,A,cp8,self.fetch_u8());
-                print!("CP d8") 
+                //print!("CP d8") 
               },
       0xFF => { push!(self,PC);
                 self.save_register16(Register::PC, 0x38);
-                print!("RST 0x38") 
+                //print!("RST 0x38") 
               },
-      _ => print!("unimplemented"),
+      _ => {},//print!("unimplemented"),
     };
+    //print!("\n");
   }
 
   fn prefix_cb(&mut self){  

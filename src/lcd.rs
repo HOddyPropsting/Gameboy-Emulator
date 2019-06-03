@@ -1,3 +1,4 @@
+
 use sdl2::pixels::Color;
 use sdl2::rect::Point;
 use sdl2::video::{Window, WindowContext};
@@ -6,6 +7,7 @@ use sdl2::video::WindowSurfaceRef;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::Canvas;
 use mmu::{Mmu,Bit};
+use cpu::{Cpu,Interrupt};
 
 
 const LCD_CONTROL_REGISTER: u16 = 0xFF40;
@@ -45,15 +47,13 @@ const COLOR_BLACK : Color = Color {
     a: 0,
 };
 
+const BG_COLOR_SHADES : [Color;4] = {[COLOR_WHITE, COLOR_L_GREY, COLOR_GREY, COLOR_BLACK]};
+
+
 pub struct Lcd{
 pub canvas : Canvas<Window>,
 pub tex : [u8; 144*3*160],
-}
-
-impl Lcd {
-  fn BG_PALETTE_MASK() -> [u8;4] {[0b00000011, 0b00001100, 0b00110000, 0b11000000]}
-
-  fn BG_COLOR_SHADES() -> [Color;4] {[COLOR_WHITE, COLOR_L_GREY, COLOR_GREY, COLOR_BLACK]}
+pub cpu :  Cpu,
 }
 
 #[derive(Debug)]
@@ -64,86 +64,86 @@ enum SpriteSize {
 
 impl Lcd {
 
-  fn get_lcd_enabled(mmu : &Mmu) -> bool{
-    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Eight);
+  fn get_lcd_enabled(&self) -> bool{
+    return self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Eight);
   }
 
-  fn get_window_tile_bank(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Seven){
+  fn get_window_tile_bank(&self) -> u16{
+    if self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Seven){
       return BACKGROUND_OFFSET_2;
     } else {
       return BACKGROUND_OFFSET_1;
     }
   }
 
-  fn get_window_enabled(mmu : &Mmu) -> bool {
-    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Six);
+  fn get_window_enabled(&self) -> bool {
+    return self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Six);
   }
 
-  fn get_tile_data_offset(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Five){
+  fn get_tile_data_offset(&self) -> u16{
+    if self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Five){
       return TILE_DATA_OFFSET_2;
     } else {
       return TILE_DATA_OFFSET_1;
     }    
   }
 
-  fn get_bg_tile_bank(mmu : &Mmu) -> u16{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Four){
+  fn get_bg_tile_bank(&self) -> u16{
+    if self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Four){
       return BACKGROUND_OFFSET_2;
     } else {
       return BACKGROUND_OFFSET_1;
     }    
   }
 
-  fn get_sprite_size(mmu : &Mmu) -> SpriteSize{
-    if mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Three){
+  fn get_sprite_size(&self) -> SpriteSize{
+    if self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Three){
       return SpriteSize::Square;
     } else {
       return SpriteSize::Rect;
     }
   }
 
-  fn get_sprite_enabled(mmu : &Mmu) -> bool{
-    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Two);
+  fn get_sprite_enabled(&self) -> bool{
+    return self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::Two);
   }
 
-  fn get_bg_enabled(mmu : &Mmu) -> bool {
-    return mmu.get_bit(LCD_CONTROL_REGISTER, Bit::One);  
+  fn get_bg_enabled(&self) -> bool {
+    return self.cpu.mmu.get_bit(LCD_CONTROL_REGISTER, Bit::One);  
   }
 
-  fn get_scroll_y(mmu : &Mmu) -> u8{
-    return mmu.fetch(0xFF42);
+  fn get_scroll_y(&self) -> u8{
+    return self.cpu.mmu.fetch(0xFF42);
   }
 
-  fn get_scroll_x(mmu : &Mmu) -> u8{
-    return mmu.fetch(0xFF43);
+  fn get_scroll_x(&self) -> u8{
+    return self.cpu.mmu.fetch(0xFF43);
   }
 
-  fn get_window_y(mmu : &Mmu) -> u8{
-    return mmu.fetch(0xFF4A);
+  fn get_window_y(&self) -> u8{
+    return self.cpu.mmu.fetch(0xFF4A);
   }
 
-  fn get_window_x(mmu : &Mmu) -> u8{
-    return mmu.fetch(0xFF4B);
+  fn get_window_x(&self) -> u8{
+    return self.cpu.mmu.fetch(0xFF4B);
   }
 
-  fn get_bg_shade(colour_no : u8, mmu : &Mmu ) -> Color{
-    return Lcd::BG_COLOR_SHADES()[colour_no as usize];
+  fn get_bg_shade(colour_no : u8) -> Color{
+    return BG_COLOR_SHADES[colour_no as usize];
   }
 
   /// Returns the tile id for a given coördinate.
   /// This should be used once the scroll x / y have been added.
-  fn get_tile_id(x : u8, y : u8, mmu : &Mmu) -> u8{
+  fn get_tile_id(&self, x : u8, y : u8) -> u8{
     let mx = x/8;
     let my = y/8;
-    let offset = Lcd::get_bg_tile_bank(mmu);
-    return mmu.fetch(offset + mx as u16 + (my as u16 * 0x10) as u16);
+    let offset = self.get_bg_tile_bank();
+    return self.cpu.mmu.fetch(offset + mx as u16 + (my as u16 * 0x10) as u16);
   }
 
   /// returns the address for the start of the tile data, for a given tile id
-  fn get_tile_address(tile_id : u8, mmu : &Mmu) -> u16 {
-    let offset = Lcd::get_tile_data_offset(mmu);
+  fn get_tile_address(&self, tile_id : u8) -> u16 {
+    let offset = self.get_tile_data_offset();
     if offset == TILE_DATA_OFFSET_1 {
       return (offset + (tile_id as u16 *0x000F)) as u16;
     } else {
@@ -153,59 +153,63 @@ impl Lcd {
 
   /// Returns a 2 bit colour id.
   /// x and y are tile coördinates. i.e 0 < x <= 8, 0 < y <= 8
-  fn get_tile_color_id(tile_address : u16, x : u8, y : u8, mmu : &Mmu) -> u8{
-    let a = mmu.fetch(tile_address + (y as u16*2));
-    let b = mmu.fetch(tile_address + (y as u16*2) + 1);
+  fn get_tile_color_id(&self, tile_address : u16, x : u8, y : u8) -> u8{
+    let low_byte = self.cpu.mmu.fetch(tile_address + (y as u16*2));
+    let high_byte = self.cpu.mmu.fetch(tile_address + (y as u16*2) + 1);
     let bit = Bit::from(x+1);
-    let low = if a & bit as u8 > 0 {1} else {0};
-    let high = if b & bit as u8 > 0 {2} else {0};
+    let low = if low_byte & bit as u8 > 0 {1} else {0};
+    let high = if high_byte & bit as u8 > 0 {2} else {0};
     return low + high;
   }
 
-  fn get_bg_pixel(x : u8, y : u8, mmu : &Mmu) -> Color{
-    if !Lcd::get_bg_enabled(mmu) {
+  fn get_bg_pixel(&self, x : u8, y : u8) -> Color{
+    if !self.get_bg_enabled() {
       return COLOR_WHITE;
     }
-    let vx = x.wrapping_add(Lcd::get_scroll_x(mmu)); //these wrap if it is over 256
-    let vy = y.wrapping_add(Lcd::get_scroll_y(mmu));
+    let vx = x.wrapping_add(self.get_scroll_x()); //these wrap if it is over 256
+    let vy = y.wrapping_add(self.get_scroll_y());
     let tx = vx % 0x8;
     let ty = vy % 0x8;
-    let address = Lcd::get_tile_address(Lcd::get_tile_id(vx, vy, mmu), mmu);
-    let color_id = Lcd::get_tile_color_id(address, tx, ty, mmu);
-    Lcd::get_bg_shade(color_id, mmu)
+    let address = self.get_tile_address(self.get_tile_id(vx, vy));
+    let color_id = self.get_tile_color_id(address, tx, ty);
+    Lcd::get_bg_shade(color_id)
   }
 
-  fn get_window_pixel(x : u8, y : u8, mmu : &Mmu) -> Option<Color>{
-    let wx = Lcd::get_window_x(mmu).saturating_sub(7);
-    let wy = Lcd::get_window_y(mmu);
-    if Lcd::get_window_enabled(mmu) && x >= wx && y >= wy {
+  fn get_window_pixel(&self, x : u8, y : u8) -> Option<Color>{
+    let wx = self.get_window_x().saturating_sub(7); // Docs are unclear about the behaviour when this is below 7, need to experiment on an actual machine. 
+    let wy = self.get_window_y();
+    if  x >= wx && y >= wy {
       let tx = x % 0x8;
       let ty = y % 0x8;
-      let address = Lcd::get_tile_address(Lcd::get_tile_id(x, y, mmu), mmu);
-      let color_id = Lcd::get_tile_color_id(address, tx, ty, mmu);
-      Some(Lcd::get_bg_shade(color_id,mmu))
+      let address = self.get_tile_address(self.get_tile_id(x, y) );
+      let color_id = self.get_tile_color_id(address, tx, ty);
+      Some(Lcd::get_bg_shade(color_id))
     } else {
       None
     }
   }
 
-  fn get_screen_pixel(x : u8, y : u8, mmu : &Mmu) -> Color{
-    match Lcd::get_window_pixel(x, y,mmu){
+  fn get_screen_pixel(&self, x : u8, y : u8) -> Color{
+    match self.get_window_pixel(x, y){
       Some(c) => c,
-      None => Lcd::get_bg_pixel(x,y, mmu),
+      None => self.get_bg_pixel(x,y),
     }
   }
 
-  pub fn render_screen(&mut self, mmu : &Mmu){
+  pub fn render_screen(&mut self){
     for y in 0u8..160u8 {
       for x in 0u8..144u8{
-        let c = Lcd::get_screen_pixel(x as u8,y as u8,mmu);
+        let c = self.get_screen_pixel(x as u8,y as u8);
         let z : usize = ((x as u32 *3) + (y as u32 * 144 * 3)) as usize;
-        self.tex[z] = c.b;
+        self.tex[z]   = c.b;
         self.tex[z+1] = c.g;
         self.tex[z+2] = c.r;
       }
+      self.cpu.interrupt(Interrupt::LCDC);
+      self.cpu.process(456);
     }
+    self.cpu.interrupt(Interrupt::V_BLANK);
+    self.cpu.process(4559);
 
     let mut surface = Surface::new(144, 160, PixelFormatEnum::RGB24).expect("Failed to create surface");
     surface.with_lock_mut(|data| {

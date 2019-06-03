@@ -5,7 +5,6 @@ extern crate time;
 mod mmu;
 mod cpu;
 mod lcd;
-
 use rand::Rng;
 
 use cpu::Cpu;
@@ -35,23 +34,27 @@ fn main() {
 
   let mut lcd = Lcd{
     canvas : canvas,
-    tex : [0; 144*3*160]
+    tex : [0; 144*3*160],
+    cpu : c,
   };
 
   let mut rng = rand::thread_rng();
 
-  c.mmu.set_bit(0xFF40,Bit::One);
-  for i in 0..15 {
-    c.mmu.save(0x8000 + i,rng.gen::<u8>());
-  } 
+  //lcd.cpu.mmu.save(0xFF4A, 120);
+  //lcd.cpu.mmu.save(0xFF4B, 0);
+
+  //lcd.cpu.mmu.set_bit(0xFF40,Bit::One);
+  //for i in 0..16 {
+   // lcd.cpu.mmu.save(0x8000 + i,rng.gen::<u8>());
+  //} 
 
   let mut prev = PreciseTime::now();
   loop {
     //c.process_next_instruction();
-    lcd.render_screen(&c.mmu);
+    lcd.render_screen();
     let now = PreciseTime::now();
     let dt = prev.to(now);
-    println!("{:?}",dt.num_milliseconds());
+    //println!("{:?}",dt.num_milliseconds());
     prev = now;
   }
 }
