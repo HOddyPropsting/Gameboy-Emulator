@@ -197,21 +197,22 @@ impl Lcd {
   }
 
   pub fn render_screen(&mut self){
-    for y in 0u8..160u8 {
-      for x in 0u8..144u8{
-        let c = self.get_screen_pixel(x as u8,y as u8);
-        let z : usize = ((x as u32 *3) + (y as u32 * 144 * 3)) as usize;
-        self.tex[z]   = c.b;
-        self.tex[z+1] = c.g;
-        self.tex[z+2] = c.r;
+    for y in 0u8..153u8 {
+      if y < 144  {
+        for x in 0u8..160u8{
+          let c = self.get_screen_pixel(x as u8,y as u8);
+          let z : usize = ((x as u32 *3) + (y as u32 * 160 * 3)) as usize;
+          self.tex[z]   = c.b;
+          self.tex[z+1] = c.g;
+          self.tex[z+2] = c.r;
+        }
+        self.cpu.interrupt(Interrupt::LCDC);
       }
-      self.cpu.interrupt(Interrupt::LCDC);
+      if y == 144 {self.cpu.interrupt(Interrupt::V_BLANK);};
+      self.cpu.mmu.save(0xFF44, y as u8);
       self.cpu.process(456);
     }
-    self.cpu.interrupt(Interrupt::V_BLANK);
-    self.cpu.process(4559);
-
-    let mut surface = Surface::new(144, 160, PixelFormatEnum::RGB24).expect("Failed to create surface");
+    let mut surface = Surface::new(160, 144, PixelFormatEnum::RGB24).expect("Failed to create surface");
     surface.with_lock_mut(|data| {
       data.copy_from_slice(&self.tex);
     });

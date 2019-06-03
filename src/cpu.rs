@@ -351,10 +351,12 @@ impl Cpu {
   }
 
   fn sub8(&mut self, a: u8, b:u8) -> u8{
+    //print!(" {:4x}, {:4x} ", a, b);
     let hf = (a & 0xf) < (b & 0xf);
     let (tmp,ov) = a.overflowing_sub(b);
     self.set_flag(NEG_FLAG, true);
     self.set_flag(ZERO_FLAG, tmp == 0);
+    //print!(" Z {}", tmp == 0);
     self.set_flag(CARRY_FLAG, ov);
     self.set_flag(HALF_FLAG, hf);
     return tmp;
@@ -372,7 +374,9 @@ impl Cpu {
   pub fn process_next_instruction(&mut self) {
     //print!("{:4x} ", self.load_register16(Register::PC));
     match self.fetch_u8() {
-      0x00 => {} //print!("NOP")
+      0x00 => {
+        //print!("NOP");
+      } 
       , 
       0x01 => { let x = self.fetch_u16();
                 self.save_register16(Register::BC, x);
@@ -438,7 +442,8 @@ impl Cpu {
                 self.set_flag(CARRY_FLAG, x > 0); 
                 //print!("RRCA")
               },
-      0x10 => {}, //print!("unimplemented STOP"),
+      0x10 => {//print!("unimplemented STOP")
+              },
       0x11 => { let x = self.fetch_u16();
                 self.save_register16(Register::DE, x);
                 //print!("LD DE {:4x}", x)
@@ -1259,7 +1264,7 @@ impl Cpu {
                 //print!("LD SP HL") 
               },
       0xFA => { let x = self.fetch_u16();
-                let y = self.load_address(x);
+                let _y = self.load_address(x);
                 //print!("LD A ({:4x})", x)
               },
       0xFB => { self.interrupt_enabled = true;
@@ -1276,7 +1281,6 @@ impl Cpu {
                 self.save_register16(Register::PC, 0x38);
                 //print!("RST 0x38") 
               },
-      _ => {},//print!("unimplemented"),
     };
     //print!("\n");
   }
